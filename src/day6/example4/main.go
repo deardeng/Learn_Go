@@ -24,9 +24,9 @@ func (f *File) Read() {
 	fmt.Println("read data")
 }
 
-func (f *File) Write() {
-	fmt.Println("write data")
-}
+// func (f *File) Write() {
+// 	fmt.Println("write data")
+// }
 
 func Test(rw ReadWriter) {
 	rw.Read()
@@ -34,6 +34,13 @@ func Test(rw ReadWriter) {
 }
 
 func main() {
-	var f File
-	Test(&f)
+	var f *File
+	// Test(&f)
+
+	var b interface{}
+
+	b = f
+
+	v, ok := b.(ReadWriter)
+	fmt.Println(v, ok)
 }
