@@ -28,8 +28,11 @@ func test(b interface{}) {
 
 func testInt(b interface{}) {
 	val := reflect.ValueOf(b)
-	c := val.Int()
+	val.Elem().SetInt(100)
+	c := val.Elem().Int()
 	fmt.Printf("get value interface{} %d\n", c)
+	fmt.Printf("string val : %s\n", val.Elem().String())
+	fmt.Printf("string val : %d\n", val.Elem().Int())
 }
 
 func main() {
@@ -42,5 +45,8 @@ func main() {
 		Score: 98,
 	}
 	test(b)
-	testInt(12212)
+
+	var c int = 1
+	testInt(&c)
+	fmt.Println(c)
 }
