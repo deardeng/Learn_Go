@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"runtime"
 )
 
 type student struct {
@@ -26,4 +27,8 @@ func main() {
 	}
 
 	fmt.Println(stu02)
+
+	num := runtime.NumCPU()
+	// runtime.GOMAXPROCS(num)
+	fmt.Println(num)
 }
