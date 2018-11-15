@@ -1,0 +1,16 @@
+<html>
+    <head>
+        <title>
+            {{.Title}}
+        </title>
+    </head>
+    <body>
+        <!-- <p> hello, {{.Name}}</p> -->
+        <!-- <p> {{.}}</p> -->
+        {{if gt .Age "18"}}
+        <p> hello, boy, {{.Name}}</p>
+        {{else}}
+        <p> hello, heiheihei, {{.Name}}</p>
+        {{end}}
+    </body>
+</html>

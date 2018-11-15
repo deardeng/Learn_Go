@@ -29,6 +29,7 @@ func (p *UserMgr) getUser(conn redis.Conn, id int) (user *User, err error) {
 		if err == redis.ErrNil {
 			err = ErrUserNotExist
 		}
+		return
 	}
 
 	user = &User{}
@@ -45,16 +46,19 @@ func (p *UserMgr) Login(id int, passwd string) (user *User, err error) {
 
 	user, err = p.getUser(conn, id)
 	if err != nil {
+		fmt.Println("3:", err)
 		return
 	}
 
 	if user.UserId != id || user.Passwd != passwd {
 		err = ErrInvalidPasswd
+		fmt.Println("4:", err)
 	}
 
 	user.Status = UserStatusOnline
 	user.LastLogin = fmt.Sprintf("%v", time.Now())
 
+	fmt.Println("5:", err)
 	return
 }
 
