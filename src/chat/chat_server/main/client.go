@@ -1,6 +1,7 @@
 package main
 
 import (
+	"chat/proto"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
@@ -9,11 +10,12 @@ import (
 )
 
 type Client struct {
-	conn net.Conn
-	buf  [8192]byte
+	conn   net.Conn
+	userId int
+	buf    [8192]byte
 }
 
-func (p *Client) readPackage() (msg Message, err error) {
+func (p *Client) readPackage() (msg proto.Message, err error) {
 	n, err := p.conn.Read(p.buf[0:4])
 	if n != 4 {
 		err = errors.New("read header failed")
@@ -65,7 +67,7 @@ func (p *Client) writePackage(data []byte) (err error) {
 
 func (p *Client) Process() (err error) {
 	for {
-		var msg Message
+		var msg proto.Message
 		msg, err = p.readPackage()
 		if err != nil {
 			return err
@@ -73,12 +75,14 @@ func (p *Client) Process() (err error) {
 
 		err = p.processMsg(msg)
 		if err != nil {
-			return
+			// return
+			fmt.Println("process msg failed, err :", err)
+			continue
 		}
 	}
 }
 
-func (p *Client) processMsg(msg Message) (err error) {
+func (p *Client) processMsg(msg proto.Message) (err error) {
 	switch msg.Cmd {
 	case UserLogin:
 		err = p.login(msg)
@@ -92,11 +96,17 @@ func (p *Client) processMsg(msg Message) (err error) {
 }
 
 func (p *Client) loginResp(err error) {
-	var respMsg Message
+	var respMsg proto.Message
 	respMsg.Cmd = UserLoginRes
 
-	var loginRes LoginCmdRes
+	var loginRes proto.LoginCmdRes
 	loginRes.Code = 200
+
+	userMap := clientMgr.GetAllUsers()
+	fmt.Println(userMap)
+	for userId, _ := range userMap {
+		loginRes.User = append(loginRes.User, userId)
+	}
 
 	if err != nil {
 		loginRes.Code = 500
@@ -122,16 +132,18 @@ func (p *Client) loginResp(err error) {
 	}
 }
 
-func (p *Client) login(msg Message) (err error) {
+func (p *Client) login(msg proto.Message) (err error) {
 	defer func() {
 		p.loginResp(err)
 	}()
 
 	fmt.Printf("recv user login request, data:%v\n", msg)
-	var cmd LoginCmd
+	var cmd proto.LoginCmd
 	err = json.Unmarshal([]byte(msg.Data), &cmd)
 	if err != nil {
 		fmt.Println("1:", err)
+		clientMgr.DelClient(p.userId)
+		//TODO:通知所有在线用户，该用户已经下线
 		return
 	}
 	_, err = mgr.Login(cmd.Id, cmd.Passwd)
@@ -139,11 +151,53 @@ func (p *Client) login(msg Message) (err error) {
 		fmt.Println("2:", err)
 		return
 	}
+
+	clientMgr.AddClient(cmd.Id, p)
+	p.userId = cmd.Id
+
+	p.NotifyOthersUserOnline(cmd.Id)
 	return
 }
 
-func (p *Client) register(msg Message) (err error) {
-	var cmd RegisterCmd
+func (p *Client) NotifyOthersUserOnline(userId int) {
+	users := clientMgr.GetAllUsers()
+	for id, client := range users {
+		if id == userId {
+			continue
+		}
+		client.UserOnline(userId)
+	}
+}
+
+func (p *Client) UserOnline(userId int) {
+	var respMsg proto.Message
+	respMsg.Cmd = proto.UserStatusNotifyRes
+
+	var notifyRes proto.UserStatusNotify
+	notifyRes.UserId = userId
+	notifyRes.Status = proto.UserOnline
+
+	data, err := json.Marshal(notifyRes)
+	if err != nil {
+		fmt.Println("marshal failed, ", err)
+		return
+	}
+
+	respMsg.Data = string(data)
+	data, err = json.Marshal(respMsg)
+	if err != nil {
+		fmt.Println("marshal failed, ", err)
+		return
+	}
+	err = p.writePackage(data)
+	if err != nil {
+		fmt.Println("send failed, ", err)
+		return
+	}
+}
+
+func (p *Client) register(msg proto.Message) (err error) {
+	var cmd proto.RegisterCmd
 	err = json.Unmarshal([]byte(msg.Data), &cmd)
 	if err != nil {
 		return

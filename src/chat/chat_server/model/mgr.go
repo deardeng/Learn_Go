@@ -1,6 +1,7 @@
 package model
 
 import (
+	"chat/common"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -23,7 +24,7 @@ func NewUserMgr(pool *redis.Pool) (mgr *UserMgr) {
 	return
 }
 
-func (p *UserMgr) getUser(conn redis.Conn, id int) (user *User, err error) {
+func (p *UserMgr) getUser(conn redis.Conn, id int) (user *common.User, err error) {
 	result, err := redis.String(conn.Do("HGet", UserTable, fmt.Sprintf("%d", id)))
 	if err != nil {
 		if err == redis.ErrNil {
@@ -32,7 +33,7 @@ func (p *UserMgr) getUser(conn redis.Conn, id int) (user *User, err error) {
 		return
 	}
 
-	user = &User{}
+	user = &common.User{}
 	err = json.Unmarshal([]byte(result), user)
 	if err != nil {
 		return
@@ -40,7 +41,7 @@ func (p *UserMgr) getUser(conn redis.Conn, id int) (user *User, err error) {
 	return
 }
 
-func (p *UserMgr) Login(id int, passwd string) (user *User, err error) {
+func (p *UserMgr) Login(id int, passwd string) (user *common.User, err error) {
 	conn := p.pool.Get()
 	defer conn.Close()
 
@@ -53,13 +54,13 @@ func (p *UserMgr) Login(id int, passwd string) (user *User, err error) {
 		err = ErrInvalidPasswd
 	}
 
-	user.Status = UserStatusOnline
+	user.Status = common.UserStatusOnline
 	user.LastLogin = fmt.Sprintf("%v", time.Now())
 
 	return
 }
 
-func (p *UserMgr) Register(user *User) (err error) {
+func (p *UserMgr) Register(user *common.User) (err error) {
 	conn := p.pool.Get()
 	defer conn.Close()
 
