@@ -28,9 +28,11 @@ type UserStatusNotify struct {
 }
 
 type UserSendMessageReq struct {
-	Data string `json:"data"`
+	UserId int    `json:"user_id"`
+	Data   string `json:"data"`
 }
 
 type UserRecvMessageReq struct {
-	Data string `json:"data"`
+	UserId int    `json:"user_id"`
+	Data   string `json:"data"`
 }

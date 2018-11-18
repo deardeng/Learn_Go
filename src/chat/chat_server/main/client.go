@@ -84,10 +84,12 @@ func (p *Client) Process() (err error) {
 
 func (p *Client) processMsg(msg proto.Message) (err error) {
 	switch msg.Cmd {
-	case UserLogin:
+	case proto.UserLogin:
 		err = p.login(msg)
-	case UserRegister:
+	case proto.UserRegister:
 		err = p.register(msg)
+	case proto.UserSendMessageCmd:
+		err = p.processUserSendMessage(msg)
 	default:
 		err = errors.New("unsupport message")
 		return
@@ -95,9 +97,54 @@ func (p *Client) processMsg(msg proto.Message) (err error) {
 	return
 }
 
+func (p *Client) SendMessageToUser(userId int, text string) {
+	var respMsg proto.Message
+	respMsg.Cmd = proto.UserRecvMessageCmd
+
+	var recvRes proto.UserRecvMessageReq
+	recvRes.UserId = userId
+	recvRes.Data = text
+
+	data, err := json.Marshal(recvRes)
+	if err != nil {
+		fmt.Println("marshal failed, ", err)
+		return
+	}
+
+	respMsg.Data = string(data)
+	data, err = json.Marshal(respMsg)
+	if err != nil {
+		fmt.Println("marshal failed, ", err)
+		return
+	}
+	err = p.writePackage(data)
+	if err != nil {
+		fmt.Println("send failed, ", err)
+		return
+	}
+}
+
+func (p *Client) processUserSendMessage(msg proto.Message) (err error) {
+	var userReq proto.UserSendMessageReq
+	err = json.Unmarshal([]byte(msg.Data), &userReq)
+	if err != nil {
+		fmt.Println("unmarshal failed, err:", err)
+		return
+	}
+
+	users := clientMgr.GetAllUsers()
+	for id, client := range users {
+		if id == userReq.UserId {
+			continue
+		}
+		client.SendMessageToUser(userReq.UserId, userReq.Data)
+	}
+	return
+}
+
 func (p *Client) loginResp(err error) {
 	var respMsg proto.Message
-	respMsg.Cmd = UserLoginRes
+	respMsg.Cmd = proto.UserLoginRes
 
 	var loginRes proto.LoginCmdRes
 	loginRes.Code = 200
@@ -165,11 +212,11 @@ func (p *Client) NotifyOthersUserOnline(userId int) {
 		if id == userId {
 			continue
 		}
-		client.UserOnline(userId)
+		client.NotifyUserOnline(userId)
 	}
 }
 
-func (p *Client) UserOnline(userId int) {
+func (p *Client) NotifyUserOnline(userId int) {
 	var respMsg proto.Message
 	respMsg.Cmd = proto.UserStatusNotifyRes
 

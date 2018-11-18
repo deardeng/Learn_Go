@@ -26,6 +26,19 @@ func processServerMessage(conn net.Conn) {
 		switch msg.Cmd {
 		case proto.UserStatusNotifyRes:
 			updateUserStatus(userStatus)
+		case proto.UserRecvMessageCmd:
+			recvMessageFromServer(msg)
 		}
 	}
+}
+
+func recvMessageFromServer(msg proto.Message) {
+	var recvMsg proto.UserRecvMessageReq
+	err := json.Unmarshal([]byte(msg.Data), &recvMsg)
+	if err != nil {
+		fmt.Println("unmarshal failed, err:", err)
+		return
+	}
+
+	msgChan <- recvMsg
 }

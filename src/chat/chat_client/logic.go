@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"os"
 )
 
 func sendTextMessage(conn net.Conn, text string) (err error) {
@@ -14,6 +15,7 @@ func sendTextMessage(conn net.Conn, text string) (err error) {
 
 	var sendReq proto.UserSendMessageReq
 	sendReq.Data = text
+	sendReq.UserId = userId
 
 	data, err := json.Marshal(sendReq)
 	if err != nil {
@@ -51,10 +53,20 @@ func enterTalk(conn net.Conn) {
 
 }
 
+func listUnReadMsg() {
+	select {
+	case msg := <-msgChan:
+		fmt.Println(msg.UserId, ":", msg.Data)
+	default:
+		return
+	}
+}
+
 func enterMenu(conn net.Conn) {
 	fmt.Println("1. list online user")
 	fmt.Println("2. talk")
-	fmt.Println("3. exit")
+	fmt.Println("3. list message")
+	fmt.Println("4. exit")
 
 	var sel int
 	fmt.Scanf("%d\n", &sel)
@@ -64,7 +76,10 @@ func enterMenu(conn net.Conn) {
 	case 2:
 		enterTalk(conn)
 	case 3:
+		listUnReadMsg()
 		return
+	case 4:
+		os.Exit(0)
 	}
 
 }

@@ -1,12 +1,18 @@
 package main
 
 import (
+	"chat/proto"
 	"fmt"
 	"net"
 )
 
 var userId int
 var passwd string
+var msgChan chan proto.UserRecvMessageReq
+
+func init() {
+	msgChan = make(chan proto.UserRecvMessageReq, 1000)
+}
 
 func main() {
 	// var userId int
